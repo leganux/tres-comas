@@ -3,6 +3,9 @@ const http = require('http');
 const https = require('https');
 const makeDir = require('make-dir');
 
+const axios = require('axios');
+const AWS = require('aws-sdk');
+const fs = require('fs');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -358,7 +361,6 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 let decoded = el.decodeBase64(auth)
 
 
-
                 if (decoded != (el.secure.user + ':' + el.secure.password)) {
                     res.status(403).json({
                         success: true,
@@ -383,6 +385,156 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     message: 'Tres comas (,,,) has been successful started',
                     container_id: await getId()
                 })
+            })
+
+            el.app.post(el.api_base_uri + 'import', middleware, async function (req, res) {
+
+                try {
+                    const url = req.body.url || 'https://leganux.net/web/wp-content/uploads/2020/01/circullogo.png';
+                    let ext = url.split('.')
+                    ext = ext[ext.length - 1]
+
+                    let file = url.split('/')
+                    file = file[file.length - 1]
+
+                    if (el.engine == 'aws-s3') {
+                        AWS.config.update({
+                            accessKeyId: el.connect.aws_access_key_id,
+                            secretAccessKey: el.connect.aws_secret_access_key,
+                        });
+
+                        const s3 = new AWS.S3();
+                        const bucketName = el.connect.bucket;
+
+
+                        const response = await axios.get(url, {
+                            responseType: 'arraybuffer',
+                        });
+
+
+                        const buffer = Buffer.from(response.data, 'binary');
+                        const params = {
+                            Bucket: bucketName,
+                            Key: file,
+                            Body: buffer,
+                        };
+
+                        s3.upload(params, async (err, data) => {
+                            if (err) {
+                                console.error(err)
+                                res.status(500).json({
+                                    success: false,
+                                    code: 500,
+                                    error: err,
+                                    message: 'Upload Error',
+                                    container_id: await getId()
+                                })
+                                return
+                            } else {
+
+                                let token = uuidv4()
+                                let response = []
+                                let fUri = req.protocol + '://' + req.get('host')
+                                let newfile = {
+                                    url: data.location,
+                                    name: data.originalname,
+                                    extension: data.contentType,
+                                    filename: data?.filename || '',
+                                    path: data?.path || '',
+                                    dest: data?.destination || '',
+                                    engine: 'aws-s3',
+                                    token: token
+                                }
+                                let toSave = new el.filesModel(newfile)
+                                toSave = await toSave.save()
+                                let link = fUri + el.api_base_uri + 'view/' + toSave._id + '?token=' + token
+                                toSave.link = link
+                                toSave = await toSave.save()
+                                response.push(toSave)
+
+                                res.status(200).json({
+                                    success: true,
+                                    code: 200,
+                                    error: false,
+                                    message: 'Upload OK',
+                                    container_id: await getId(),
+                                    data: response
+                                })
+                                return
+                            }
+                        });
+
+                    } else {
+
+                        let path_ = await makeDir(el.path_folder + '/downloaded/' + file);
+
+                        axios({
+                            method: 'get',
+                            url: url,
+                            responseType: 'stream',
+                        }).then(response => {
+                            const path__ = path.join(path_);
+                            const writer = fs.createWriteStream(path__);
+                            response.data.pipe(writer);
+                            writer.on('finish', async () => {
+                                let token = uuidv4()
+                                let response = []
+                                let fUri = req.protocol + '://' + req.get('host')
+                                let newfile = {
+                                    url: data.location,
+                                    name: data.originalname,
+                                    extension: data.contentType,
+                                    filename: data?.filename || '',
+                                    path: data?.path || '',
+                                    dest: data?.destination || '',
+                                    engine: 'aws-s3',
+                                    token: token
+                                }
+                                let toSave = new el.filesModel(newfile)
+                                toSave = await toSave.save()
+                                let link = fUri + el.api_base_uri + 'view/' + toSave._id + '?token=' + token
+                                toSave.link = link
+                                toSave = await toSave.save()
+                                response.push(toSave)
+
+                                res.status(200).json({
+                                    success: true,
+                                    code: 200,
+                                    error: false,
+                                    message: 'Upload OK',
+                                    container_id: await getId(),
+                                    data: response
+                                })
+                                return
+                            });
+                        }).catch(err => {
+                            console.error(err)
+                            res.status(500).json({
+                                success: false,
+                                code: 500,
+                                error: err,
+                                message: 'Upload Error',
+
+                            })
+                            return
+                        });
+
+
+                    }
+
+
+                } catch (e) {
+                    console.error(e)
+                    res.status(500).json({
+                        success: false,
+                        code: 500,
+                        error: e,
+                        message: 'Upload Error',
+                        container_id: await getId()
+                    })
+                }
+
+
             })
 
             el.app.post(el.api_base_uri + 'upload/array', upload.array('files', el.limits.filesArray || 10), middleware, async function (req, res) {

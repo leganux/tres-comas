@@ -3,7 +3,7 @@
 <hr>
 <br>
 <p align="center">
-  <img src="trescomas.jpg?raw=true" width="550" title="trescomas logo">
+  <img src="https://github.com/leganux/tres-comas/raw/main/trescomas.jpg?raw=true" width="550" title="trescomas logo">
 </p>
 
 
