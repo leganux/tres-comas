@@ -14,8 +14,6 @@ Creating a rest API with for manage files never was easy.
 
 Thanks to tres-comas you can create a REST API to manage files using AWS-S3 or Local folder
 
-
-
 ## How to use
 
 <hr>
@@ -34,38 +32,38 @@ const tresComas = require("tres-comas");
 let mongoDBURI = 'mongodb://localhost/files'  // the mongo db uri where file data and properties will be  saved
 let port = 3007 // port to run your app 
 let options = {
-          api_base_uri: false, // default "/file/"
-          activeLogRequest: true, // to check what endpoint is calling 
-          active_cors: true, // allows all cors
-          collection_name: "files", // the name of mongodb collection
-          public_folder: "archive", //the name of route for public folder 
-          path_folder: "files", // where files will be stored in local
-          allow_public: true,// if you want to allow public folder for local
-          limits: {
-            fileSize: Infinity, //maX filezise
-            filesArray: 10 // Max number of files for array upload
-          },
-          structure_folder: "date",// the structure will be created to store data ::  date, root, extension,custom, alphabetic
-          custom_folder_name: false,// if custom folder selected
-          engine: "local", //"local", aws-s3 :: If will be stored in aws or local folders
-          connect: { // data of s3 connection
-            bucket: 'trescomas',
-            acl: "public-read",
-            contentDisposition: "inline",// 'attachment',
-            serverSideEncryption: false, //'AES256',
-            contentEncoding: false,
-            region: "us-east-2",
-            aws_access_key_id: "1234567890",
-            aws_secret_access_key: "1234567890",
+    api_base_uri: false, // default "/file/"
+    activeLogRequest: true, // to check what endpoint is calling 
+    active_cors: true, // allows all cors
+    collection_name: "files", // the name of mongodb collection
+    public_folder: "archive", //the name of route for public folder 
+    path_folder: "files", // where files will be stored in local
+    allow_public: true,// if you want to allow public folder for local
+    limits: {
+        fileSize: Infinity, //maX filezise
+        filesArray: 10 // Max number of files for array upload
+    },
+    structure_folder: "date",// the structure will be created to store data ::  date, root, extension,custom, alphabetic
+    custom_folder_name: false,// if custom folder selected
+    engine: "local", //"local", aws-s3 :: If will be stored in aws or local folders
+    connect: { // data of s3 connection
+        bucket: 'trescomas',
+        acl: "public-read",
+        contentDisposition: "inline",// 'attachment',
+        serverSideEncryption: false, //'AES256',
+        contentEncoding: false,
+        region: "us-east-2",
+        aws_access_key_id: "1234567890",
+        aws_secret_access_key: "1234567890",
 
-          },
-          secure: { // if use basic auth  to consume endpoints
-            user: "tres-comas",
-            password: "Russ-Hanneman"
-          }
-        }
+    },
+    secure: { // if use basic auth  to consume endpoints
+        user: "tres-comas",
+        password: "Russ-Hanneman"
+    }
+}
 
-let files = new tresComas(mongoDBURI, port,options)
+let files = new tresComas(mongoDBURI, port, options)
 
 ```
 
@@ -76,7 +74,6 @@ files.initialize()
 files.start()
 ```
 
-
 **Full example code**
 
 ```javascript
@@ -84,22 +81,22 @@ let tresComas = require('./index')
 
 
 let files = new tresComas('mongodb://localhost/files', 3007,
-        {
-          api_base_uri: false,
-          activeLogRequest: true,
-          active_cors: true,
-          collection_name: "files",
-          public_folder: "archive",
-          path_folder: "files",
-          allow_public: true,
-          limits: {
+    {
+        api_base_uri: false,
+        activeLogRequest: true,
+        active_cors: true,
+        collection_name: "files",
+        public_folder: "archive",
+        path_folder: "files",
+        allow_public: true,
+        limits: {
             fileSize: Infinity,
             filesArray: 10
-          },
-          structure_folder: "date",//date, root, extension,custom, alphabetic
-          custom_folder_name: false,
-          engine: "local", //"local", //aws-s3
-          connect: {
+        },
+        structure_folder: "date",//date, root, extension,custom, alphabetic
+        custom_folder_name: false,
+        engine: "local", //"local", //aws-s3
+        connect: {
             bucket: 'trescomas',
             acl: "public-read",
             contentDisposition: "inline",// 'attachment',
@@ -109,12 +106,12 @@ let files = new tresComas('mongodb://localhost/files', 3007,
             aws_access_key_id: "1234567890",
             aws_secret_access_key: "1234567890",
 
-          },
-          secure: {
+        },
+        secure: {
             user: "tres-comas",
             password: "Russ-Hanneman"
-          }
-        })
+        }
+    })
 files.initialize()
 files.start()
 
@@ -126,7 +123,6 @@ files.start()
 
 ### *POST:upload
 
-
 **Fetch request example**
 
 ```javascript
@@ -136,15 +132,15 @@ formdata.append("files", fileInput.files[0], "pexels-pixabay-326058.jpg");
 formdata.append("files", fileInput.files[0], "pexels-may-barros-1260841.jpg");
 
 var requestOptions = {
-  method: 'POST',
-  body: formdata,
-  redirect: 'follow'
+    method: 'POST',
+    body: formdata,
+    redirect: 'follow'
 };
 
 fetch("http://localhost:3007/file/upload/", requestOptions)
-        .then(response => response.text())
-        .then(result => console.log(result))
-        .catch(error => console.log('error', error));
+    .then(response => response.text())
+    .then(result => console.log(result))
+    .catch(error => console.log('error', error));
 
 ```
 
@@ -207,10 +203,7 @@ fetch("http://localhost:3007/file/upload/", requestOptions)
 }
 ```
 
-
-
 ### *POST:upload/array
-
 
 **Fetch request example**
 
@@ -221,15 +214,15 @@ formdata.append("files", fileInput.files[0], "pexels-pixabay-326058.jpg");
 formdata.append("files", fileInput.files[0], "pexels-may-barros-1260841.jpg");
 
 var requestOptions = {
-  method: 'POST',
-  body: formdata,
-  redirect: 'follow'
+    method: 'POST',
+    body: formdata,
+    redirect: 'follow'
 };
 
 fetch("http://localhost:3007/file/upload/array", requestOptions)
-        .then(response => response.text())
-        .then(result => console.log(result))
-        .catch(error => console.log('error', error));
+    .then(response => response.text())
+    .then(result => console.log(result))
+    .catch(error => console.log('error', error));
 
 ```
 
@@ -294,7 +287,6 @@ fetch("http://localhost:3007/file/upload/array", requestOptions)
 
 ### *POST:upload/single
 
-
 **Fetch request example**
 
 ```javascript
@@ -305,16 +297,16 @@ var formdata = new FormData();
 formdata.append("file", fileInput.files[0], "popeye.jpeg");
 
 var requestOptions = {
-  method: 'POST',
-  headers: myHeaders,
-  body: formdata,
-  redirect: 'follow'
+    method: 'POST',
+    headers: myHeaders,
+    body: formdata,
+    redirect: 'follow'
 };
 
 fetch("http://localhost:3007/file/upload/single", requestOptions)
-        .then(response => response.text())
-        .then(result => console.log(result))
-        .catch(error => console.log('error', error));
+    .then(response => response.text())
+    .then(result => console.log(result))
+    .catch(error => console.log('error', error));
 
 ```
 
@@ -347,13 +339,12 @@ fetch("http://localhost:3007/file/upload/single", requestOptions)
 }
 ```
 
-
-
 ### *GET:view/id
 
 **Request Parameters**
+
 * prams(url):Must contain this element
-    *id(string):the file id to view 
+  *id(string):the file id to view
 * query(url): Could contain the next elements
     * token(String): String of token file
     * authorization(String):String to allow see in case of secure
@@ -364,10 +355,7 @@ fetch("http://localhost:3007/file/upload/single", requestOptions)
 http://localhost:3007/file/view/642b70a2fb1dac5b8e3d8475?token=5a376256-465f-42ae-b4c1-7bf8266ea9d6&authorization=dHJlcy1jb21hczpSdXNzLUhhbm5lbWFu
 ```
 
-
-
 ### *GET:list
-
 
 **Request Parameters**
 
@@ -385,15 +373,15 @@ var myHeaders = new Headers();
 myHeaders.append("Authorization", "Basic dHJlcy1jb21hczpSdXNzLUhhbm5lbWFu");
 
 var requestOptions = {
-  method: 'GET',
-  headers: myHeaders,
-  redirect: 'follow'
+    method: 'GET',
+    headers: myHeaders,
+    redirect: 'follow'
 };
 
 fetch("http://localhost:3007/file/list?paginate[page]=1&paginate[limit]=3&sort[createdAt]=-1", requestOptions)
-        .then(response => response.text())
-        .then(result => console.log(result))
-        .catch(error => console.log('error', error));
+    .then(response => response.text())
+    .then(result => console.log(result))
+    .catch(error => console.log('error', error));
 
 ```
 
@@ -456,8 +444,19 @@ fetch("http://localhost:3007/file/list?paginate[page]=1&paginate[limit]=3&sort[c
 
 ```
 
+## OTHER endpoints
 
+now there are another endpoints can be executed, Powered by
+APIATO ( <a href="https://www.npmjs.com/package/apiato"> https://www.npmjs.com/package/apiato </a> )
 
+Function
+
+* GET file/one = get a file detail for search and filters
+* GET file/:id = get a file detail for id
+* GET file/ = get a list of files with detail for search and filters
+* PUT file/:id = updates a file by ID (Physical binary file not change)
+* DELETE file/:id = deletes a file by ID (Physical binary file not erase)
+* POST file/dt_agr = Caller for datatable
 
 ## Object request query URL example
 
@@ -475,8 +474,6 @@ let where = {
     age: 30
 }
 ```
-
-
 
 **like**
 
@@ -522,10 +519,6 @@ let sort = {
 }
 ```
 
-
-
-
-
 <hr>
 
 
@@ -536,7 +529,7 @@ let sort = {
     <br>
    This project is distributed under the MIT license. 
     <br>
-     
+
 <br>
 <br>
 The logo and the name of tres-comas is inspired by the name of tres-comas, the fictional tequila  of Russ Hanneman, a character from the HBO series, Silicon Valley. This inspiration was taken for fun purposes only. The original name and logo reserve their rights to their original creators. 

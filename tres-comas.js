@@ -1,8 +1,12 @@
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const makeDir = require('make-dir');
 
+
+//import APIATO
+let apiato = require('apiato')
+//initialize microservice objecto for employee colection
+let ms_ = new apiato();
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -38,7 +42,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 }, ssl_config = {}) {
 
     console.log(`
-    v1.0.0
+    v1.0.1
     Welcome to Tres Comas
                                                                                                                          
  ,.--.   ,.--.   ,.--.   
@@ -714,6 +718,15 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     })
                 }
             })
+
+            el.app.post(el.api_base_uri + 'file/dt_agr', middleware, ms_.datatable_aggregate(el.filesModel, [], '', {allowDiskUse: true}))
+            el.app.get(el.api_base_uri + 'file/one', middleware, ms_.getOneWhere(el.filesModel, false, {}))
+            el.app.get(el.api_base_uri + 'file/:id', middleware, ms_.getOneById(el.filesModel, false, {}))
+            el.app.get(el.api_base_uri + 'file/', middleware, ms_.getMany(el.filesModel, false, {}))
+
+            el.app.put(el.api_base_uri + 'file/:id', middleware, ms_.updateById(el.filesModel, {}, false, {}))
+            el.app.delete(el.api_base_uri + 'file/:id', middleware, ms_.findIdAndDelete(el.filesModel, {}))
+
 
 
         }
