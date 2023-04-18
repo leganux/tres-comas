@@ -8,5 +8,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="slice-line" />
+    <orderEntry type="module" module-name="end-frame" />
+    <orderEntry type="module" module-name="apied-pipper" />
   </component>
 </module>

@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../apied-piper/.idea/apied-pipper.iml" filepath="$PROJECT_DIR$/../apied-piper/.idea/apied-pipper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../end-frame/.idea/end-frame.iml" filepath="$PROJECT_DIR$/../end-frame/.idea/end-frame.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../slice-line/.idea/slice-line.iml" filepath="$PROJECT_DIR$/../slice-line/.idea/slice-line.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/tres-comas.iml" filepath="$PROJECT_DIR$/.idea/tres-comas.iml" />
     </modules>
   </component>

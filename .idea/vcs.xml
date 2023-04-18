@@ -2,5 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../apied-piper" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../end-frame" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../slice-line" vcs="Git" />
   </component>
 </project>

@@ -37,12 +37,14 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
         filesArray: 10
     },
     engine: "aws-s3", //"local", //aws-s3
-    connect: false
+    connect: false,
+    app: false,
+    mongoose: false
 
 }, ssl_config = {}) {
 
     console.log(`
-    v1.0.1
+    v1.0.2
     Welcome to Tres Comas
                                                                                                                          
  ,.--.   ,.--.   ,.--.   
@@ -59,26 +61,54 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 `)
 
     try {
-        this.mongoose = require("mongoose");
+        this.instancedMongoose = false
+        this.mongoose = {}
+        if (!options.mongoose) {
+            this.mongoose = require("mongoose");
+
+        } else {
+            this.mongoose = options.mongoose
+            this.instancedMongoose = true
+        }
+
+
         if (!mongoDBUri) {
             throw new Error('You must to add the mongo db URI')
         }
-        this.app = express()
-        this.app.use(bodyParser.urlencoded({extended: true}));
-        this.app.use(bodyParser.json());
+        this.app = {}
+        this.instancedApp = false
+
+        if (options.app) {
+            this.app = options.app
+            this.instancedApp = true
+        } else {
+            this.app = express()
+            this.app.use(bodyParser.urlencoded({extended: true}));
+            this.app.use(bodyParser.json());
+            this.instancedApp = false
+        }
 
 
         this.activeLogRequest = false
-        if (ssl_config && ssl_config.private && ssl_config.cert && ssl_config.port) {
+
+        if (ssl_config && ssl_config.private && ssl_config.cert && ssl_config.port && !this.instancedApp) {
             this.privateKey = fs.readFileSync(ssl_config.private, 'utf8');
             this.certificate = fs.readFileSync(ssl_config.cert, 'utf8');
             this.credentials = {key: this.privateKey, cert: this.certificate};
             this.httpsServer = https.createServer(this.credentials, this.app);
         }
-        this.httpServer = http.createServer(this.app);
-        this.mongoose.connect(mongoDBUri, {useUnifiedTopology: true, useNewUrlParser: true,});
-        this.mongoose.set('strictQuery', true);
+
+        if (!this.instancedApp) {
+            this.httpServer = http.createServer(this.app);
+        }
+
+        if (!this.instancedMongoose) {
+            this.mongoose.connect(mongoDBUri, {useUnifiedTopology: true, useNewUrlParser: true,});
+            this.mongoose.set('strictQuery', true);
+        }
+
         this.db = this.mongoose.connection;
+
         this.api_base_uri = '/file/';
         this.allow_public = false;
         this.path_folder = "/files";
@@ -171,7 +201,6 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
             this.limits.fileSize = options?.limits?.fileSize || Infinity
             this.limits.filesArray = options?.limits?.filesArray || 10
         }
-
         if (options.allow_public) {
             this.allow_public = options.allow_public
         }
@@ -212,9 +241,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 type: String
             },
         }, {timestamps: el__.db_timestamps})
-
         this.filesModel = this.mongoose.model(el__.collection_name, this.filesMSchema, el__.collection_name)
-
         this.decodeBase64 = function (data) {
             return Buffer.from(data, 'base64').toString('utf8')
         }
@@ -360,7 +387,6 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 
 
                 let decoded = el.decodeBase64(auth)
-
 
 
                 if (decoded != (el.secure.user + ':' + el.secure.password)) {
@@ -728,7 +754,6 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
             el.app.delete(el.api_base_uri + 'file/:id', middleware, ms_.findIdAndDelete(el.filesModel, {}))
 
 
-
         }
 
         this.addHooliLogger = async function (host = "http://localhost:3333", AppName = 'tres-comas') {
@@ -780,11 +805,22 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 try {
                     let obj_counts = []
 
+                    let drive_info,
+                        drive_free,
+                        drive_used = {}
+                    try {
+                        drive_info = await drive.info()
+                        drive_free = await drive.free()
+                        drive_used = await drive.used()
+                    } catch (e) {
+                        console.info('No hay disco ')
+                    }
+
                     res.status(200).json({
                         success: true,
                         code: 200,
                         error: '',
-                        message: 'APIed-Piper server statistics',
+                        message: 'Server statistics',
                         data: {
                             model_counts: obj_counts,
                             cpu_usage: await cpu.usage(),
@@ -792,9 +828,9 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                             cpu_free: await cpu.free(),
                             cpu_count: await cpu.count(),
                             osCmd_whoami: await osCmd.whoami(),
-                            drive_info: await drive.info(),
-                            drive_free: await drive.free(),
-                            drive_used: await drive.used(),
+                            drive_info,
+                            drive_free,
+                            drive_used,
                             mem_used: await mem.used(),
                             mem_free: await mem.free(),
 
@@ -819,13 +855,23 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 }
             })
         }
+        this.getExpressInstanceApp = function () {
+            return this.app
+        }
+        this.getMongooseInstanceApp = function () {
+            return {
+                mongooseInstance: this.mongoose,
+                schema: {FILES: this.filesMSchema},
+                model: {FILES: this.filesModel}
+            }
+        }
         this.start = async function () {
             this.app.get('*', async function (_req, res) {
                 res.status(404).json({
                     success: false,
                     code: 404,
                     error: 'Resource not found',
-                    message: 'APIed Piper has been successful started',
+                    message: 'Tres-Comas has been successful started',
                     container_id: await getId()
                 })
             })
