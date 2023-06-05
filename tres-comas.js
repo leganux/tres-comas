@@ -3,10 +3,15 @@ const http = require('http');
 const https = require('https');
 
 
+const AWS = require('aws-sdk');
+const {promisify} = require('util');
+
+
 //import APIATO
 let apiato = require('apiato')
 //initialize microservice objecto for employee colection
 let ms_ = new apiato();
+var makeDir = require('makedir');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -40,6 +45,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
     connect: false,
     app: false,
     mongoose: false
+
 
 }, ssl_config = {}) {
 
@@ -108,6 +114,8 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
         }
 
         this.db = this.mongoose.connection;
+        this.s3 = {}
+        this.PARAMS = {}
 
         this.api_base_uri = '/file/';
         this.allow_public = false;
@@ -282,21 +290,22 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         },
                         key: function (req, file, cb) {
                             let ext = file.originalname.split('.')
+                            let folder = req?.folder ? (req.folder + '/') : ""
                             ext = ext[ext.length - 1]
                             if (el.structure_folder == 'date') {
-                                cb(null, moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/' + uuidv4() + '__' + file.originalname)
+                                cb(null, folder + moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/' + uuidv4() + '__' + file.originalname)
                             } else if (el.structure_folder == 'extension') {
-                                cb(null, ext.toUpperCase() + '/' + uuidv4() + '__' + file.originalname)
+                                cb(null, folder + ext.toUpperCase() + '/' + uuidv4() + '__' + file.originalname)
                             } else if (el.structure_folder == 'custom') {
-                                cb(null, el.custom_folder_name + '/' + uuidv4() + '__' + file.originalname)
+                                cb(null, folder + el.custom_folder_name + '/' + uuidv4() + '__' + file.originalname)
                             } else if (el.structure_folder == 'alphabetic') {
                                 let vo = file.originalname.split('')
                                 vo = vo[0]
-                                cb(null, vo.toUpperCase() + '/' + uuidv4() + '__' + file.originalname)
+                                cb(null, folder + vo.toUpperCase() + '/' + uuidv4() + '__' + file.originalname)
                             } else {
                                 let vo = file.originalname.split('')
                                 vo = vo[0]
-                                cb(null, uuidv4() + '__' + file.originalname)
+                                cb(null, folder + uuidv4() + '__' + file.originalname)
                             }
 
                         }
@@ -309,29 +318,30 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 
                         let ext = file.originalname.split('.')
                         ext = ext[ext.length - 1]
+                        let folder = req?.folder ? (req.folder + '/') : ""
 
 
                         if (el.structure_folder == 'date') {
-                            let path_ = await makeDir(el.path_folder + '/' + moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/');
-                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/'
+                            let path_ = await makeDir(el.path_folder + '/' + folder + moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/');
+                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + folder + moment().format('YYYY') + '/' + moment().format('MM') + '/' + moment().format('DD') + '/'
                             cb(null, path_)
                         } else if (el.structure_folder == 'extension') {
-                            let path_ = await makeDir(el.path_folder + '/' + ext.toUpperCase() + '/');
-                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + ext.toUpperCase() + '/'
+                            let path_ = await makeDir(el.path_folder + '/' + folder + ext.toUpperCase() + '/');
+                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + folder + ext.toUpperCase() + '/'
                             cb(null, path_)
                         } else if (el.structure_folder == 'custom') {
-                            let path_ = await makeDir(el.path_folder + '/' + el.custom_folder_name + '/');
-                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + el.custom_folder_name + '/'
+                            let path_ = await makeDir(el.path_folder + '/' + folder + el.custom_folder_name + '/');
+                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + folder + el.custom_folder_name + '/'
                             cb(null, path_)
                         } else if (el.structure_folder == 'alphabetic') {
                             let vo = file.originalname.split('')
                             vo = vo[0]
-                            let path_ = await makeDir(el.path_folder + '/' + vo.toUpperCase() + '/');
-                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + vo.toUpperCase() + '/'
+                            let path_ = await makeDir(el.path_folder + '/' + folder + vo.toUpperCase() + '/');
+                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + folder + vo.toUpperCase() + '/'
                             cb(null, path_)
                         } else {
-                            let path_ = await makeDir(el.path_folder + '/');
-                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/'
+                            let path_ = await makeDir(el.path_folder + '/' + folder);
+                            req.innerPath = req.protocol + '://' + req.get('host') + '/' + el.public_folder + '/' + folder
                             cb(null, path_)
                         }
                     },
@@ -562,7 +572,80 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 
 
             })
-            el.app.post(el.api_base_uri + 'upload/', upload.single('file'), middleware, async function (req, res) {
+            el.app.post(el.api_base_uri + 'upload/', upload.any(), middleware, async function (req, res) {
+
+                try {
+                    let response = []
+                    let fUri = req.protocol + '://' + req.get('host')
+
+                    for (let item of req.files) {
+                        let token = uuidv4()
+
+
+                        if (el.engine == "aws-s3") {
+                            let newfile = {
+                                url: item.location,
+                                name: item.originalname,
+                                extension: item.contentType,
+                                filename: item?.filename || '',
+                                path: item?.path || '',
+                                dest: item?.destination || '',
+                                engine: 'aws-s3',
+                                token: token
+                            }
+                            let toSave = new el.filesModel(newfile)
+                            toSave = await toSave.save()
+                            let link = fUri + el.api_base_uri + 'view/' + toSave._id + '?token=' + token
+                            toSave.link = link
+                            toSave = await toSave.save()
+                            response.push(toSave)
+                        } else {
+                            let newfile = {
+
+                                name: item.originalname,
+                                filename: item?.filename || '',
+                                path: item?.path || '',
+                                dest: item?.destination || '',
+                                extension: item.contentType,
+                                url: (el.allow_public ? (req.innerPath + item.filename) : undefined),
+                                engine: 'local',
+                                allow_public: el.allow_public,
+                                token: token
+                            }
+                            let toSave = new el.filesModel(newfile)
+                            toSave = await toSave.save()
+                            let link = fUri + el.api_base_uri + 'view/' + toSave._id + '?token=' + token
+                            toSave.link = link
+                            toSave = await toSave.save()
+                            response.push(toSave)
+                        }
+
+                    }
+
+
+                    res.status(200).json({
+                        success: true,
+                        code: 200,
+                        error: false,
+                        message: 'Upload OK',
+                        container_id: await getId(),
+                        data: response
+                    })
+                } catch (e) {
+                    console.error(e)
+                    res.status(500).json({
+                        success: false,
+                        code: 500,
+                        error: e,
+                        message: 'Upload Error',
+                        container_id: await getId()
+                    })
+                }
+
+
+            })
+
+            el.app.post(el.api_base_uri + 'upload/f/:folder/', upload.any(), middleware, async function (req, res) {
 
                 try {
                     let response = []
@@ -887,6 +970,70 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 console.log("MongoDB database connection established successfully", mongoDBUri);
             });
             return true
+        }
+        this.uploadFileS3 = async function (filePath, dest) {
+            let el = this
+            el.S3 = new AWS.S3({
+                accessKeyId: el.connect.aws_access_key_id,
+                secretAccessKey: el.connect.aws_secret_access_key
+            });
+
+            el.PARAMS = {
+                Bucket: el.connect.bucket,
+                CreateBucketConfiguration: {
+                    LocationConstraint: el.connect.region
+                }
+            };
+
+            let createBucket = promisify(el.S3.createBucket).bind(el.S3);
+            let upload = promisify(el.S3.upload).bind(el.S3);
+            let data = await createBucket(el.PARAMS);
+            el.LOCATION = data.Location;
+            el.BUCKET_DATA = data;
+
+
+            let file = fs.readFileSync(filePath)
+            let parse = path.parse(filePath)
+            let nameFile_file = parse.name
+            let ext = path.extname(filePath).replace('.', '').toLowerCase()
+            let params
+
+            if (ext.includes('pdf')) {
+
+                params = {
+                    Bucket: el.connect.bucket,
+                    Key: dest + name + ext,
+                    Body: file,
+                    ACL: 'public-read',
+                    ContentType: 'application/pdf',
+                    ContentDisposition: 'inline; filename=test.pdf',
+                    ResponseContentDisposition: 'inline; filename=test.pdf',
+                }
+            } else if (ext.includes('jpg') || ext.includes('jpeg') || ext.includes('png') || ext.includes('tiff') || ext.includes('webp') || ext.includes('bmp')) {
+
+                params = {
+                    Bucket: el.connect.bucket,
+                    Key: dest + nameFile_file + ext,
+                    Body: file,
+                    ACL: 'public-read',
+                    ContentType: 'image/' + ext,
+                    ContentDisposition: 'inline; filename=' + nameFile_file + ext,
+                    ResponseContentDisposition: 'inline; filename=' + nameFile_file + ext,
+                }
+            } else {
+                params = {
+                    Bucket: el.connect.bucket,
+                    Key: dest + nameFile_file + ext,
+                    Body: file,
+                    ACL: 'public-read',
+                    ContentDisposition: 'inline'
+                }
+            }
+
+            let uploadedFile = await upload(params)
+            return {
+                file: uploadedFile
+            }
         }
     } catch (e) {
         console.error(e)
