@@ -3,7 +3,6 @@ const http = require('http');
 const https = require('https');
 
 
-const AWS = require('aws-sdk');
 const {promisify} = require('util');
 
 
@@ -11,7 +10,7 @@ const {promisify} = require('util');
 let apiato = require('apiato')
 //initialize microservice objecto for employee colection
 let ms_ = new apiato();
-var makeDir = require('makedir');
+let makeDir = require('makedir').makedir
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -23,7 +22,8 @@ let osu = require('node-os-utils')
 let hooli = require("hooli-logger-client")
 let path = require('path')
 
-const {S3Client} = require('@aws-sdk/client-s3')
+
+const {S3Client, PutObjectCommand, GetObjectCommand} = require('@aws-sdk/client-s3');
 const multer = require('multer')
 const multerS3 = require('multer-s3')
 
@@ -166,7 +166,6 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
             process.env.AWS_ACCESS_KEY_ID = this.connect.aws_access_key_id
             process.env.AWS_SECRET_ACCESS_KEY = this.connect.aws_secret_access_key
         }
-
 
         if (options.engine) {
             this.engine = options.engine
@@ -972,67 +971,65 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
             return true
         }
         this.uploadFileS3 = async function (filePath, dest) {
-            let el = this
-            el.S3 = new AWS.S3({
-                accessKeyId: el.connect.aws_access_key_id,
-                secretAccessKey: el.connect.aws_secret_access_key
-            });
+            try {
+                let el = this
 
-            el.PARAMS = {
-                Bucket: el.connect.bucket,
-                CreateBucketConfiguration: {
-                    LocationConstraint: el.connect.region
+                const s3Client = new S3Client({
+                    credentials: {
+                        accessKeyId: el.connect.aws_access_key_id,
+                        secretAccessKey: el.connect.aws_secret_access_key,
+                    },
+                    region: el.connect.region
+                });
+
+
+                let file = fs.readFileSync(filePath)
+                let parse = path.parse(filePath)
+                let nameFile_file = parse.name
+                let ext = parse.ext.replace('.', '')
+                let params
+
+                if (ext.includes('pdf')) {
+
+                    params = {
+                        Bucket: el.connect.bucket,
+                        Key: dest,
+                        Body: file,
+                        ACL: 'public-read',
+                        ContentType: 'application/pdf',
+                        ContentDisposition: 'inline; filename=test.pdf',
+                        ResponseContentDisposition: 'inline; filename=test.pdf',
+                    }
+                } else if (ext.includes('jpg') || ext.includes('jpeg') || ext.includes('png') || ext.includes('tiff') || ext.includes('webp') || ext.includes('bmp')) {
+
+                    params = {
+                        Bucket: el.connect.bucket,
+                        Key: dest,
+                        Body: file,
+                        ACL: 'public-read',
+                        ContentType: 'image/' + ext,
+                        ContentDisposition: 'inline; filename=' + nameFile_file + '.' + ext,
+                        ResponseContentDisposition: 'inline; filename=' + nameFile_file + '.' + ext,
+                    }
+                } else {
+                    params = {
+                        Bucket: el.connect.bucket,
+                        Key: dest,
+                        Body: file,
+                        ACL: 'public-read',
+                        ContentDisposition: 'inline'
+                    }
                 }
-            };
 
-            let createBucket = promisify(el.S3.createBucket).bind(el.S3);
-            let upload = promisify(el.S3.upload).bind(el.S3);
-            let data = await createBucket(el.PARAMS);
-            el.LOCATION = data.Location;
-            el.BUCKET_DATA = data;
+                const command = new PutObjectCommand(params);
+                const response = await s3Client.send(command);
 
-
-            let file = fs.readFileSync(filePath)
-            let parse = path.parse(filePath)
-            let nameFile_file = parse.name
-            let ext = path.extname(filePath).replace('.', '').toLowerCase()
-            let params
-
-            if (ext.includes('pdf')) {
-
-                params = {
-                    Bucket: el.connect.bucket,
-                    Key: dest + name + ext,
-                    Body: file,
-                    ACL: 'public-read',
-                    ContentType: 'application/pdf',
-                    ContentDisposition: 'inline; filename=test.pdf',
-                    ResponseContentDisposition: 'inline; filename=test.pdf',
-                }
-            } else if (ext.includes('jpg') || ext.includes('jpeg') || ext.includes('png') || ext.includes('tiff') || ext.includes('webp') || ext.includes('bmp')) {
-
-                params = {
-                    Bucket: el.connect.bucket,
-                    Key: dest + nameFile_file + ext,
-                    Body: file,
-                    ACL: 'public-read',
-                    ContentType: 'image/' + ext,
-                    ContentDisposition: 'inline; filename=' + nameFile_file + ext,
-                    ResponseContentDisposition: 'inline; filename=' + nameFile_file + ext,
-                }
-            } else {
-                params = {
-                    Bucket: el.connect.bucket,
-                    Key: dest + nameFile_file + ext,
-                    Body: file,
-                    ACL: 'public-read',
-                    ContentDisposition: 'inline'
-                }
-            }
-
-            let uploadedFile = await upload(params)
-            return {
-                file: uploadedFile
+                return {
+                    file: response,
+                    url: `https://${params.Bucket}.s3.amazonaws.com/${params.Key}`
+                };
+            } catch (e) {
+                throw e
             }
         }
     } catch (e) {
