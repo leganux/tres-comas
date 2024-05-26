@@ -1,6 +1,6 @@
 {
   "name": "tres-comas",
-  "version": "1.0.5",
+  "version": "3.0.0",
   "description": "file-manager services",
   "main": "index.js",
   "scripts": {

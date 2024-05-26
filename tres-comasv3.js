@@ -278,7 +278,9 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                 const storage = multer.memoryStorage();
                 upload = multer({ storage: storage });
                 this.s3Client = new S3Client({ region: this.connect.region });
+               
 
+                
             } else {
 
                 const storage = multer.diskStorage({

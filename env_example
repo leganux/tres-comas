@@ -1,0 +1,4 @@
+AWS_ACCESS_KEY_ID=xxxxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxx
+S3_BUCKET_NAME=xxxxxxxxxxxxxxxx
+AWS_REGION=xxxxxxxxxxxxxxxxxxxx
