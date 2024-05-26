@@ -2,6 +2,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 
+var jwt = require('jsonwebtoken');
 
 //import APIATO
 let apiato = require('apiato')
@@ -26,6 +27,7 @@ const multerS3 = require('multer-s3')
 
 const { v4: uuidv4 } = require('uuid');
 const bucket = require('node-os-utils/lib/bucket');
+const { log } = require('console');
 
 require('dotenv').config()
 
@@ -48,7 +50,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
 }, ssl_config = {}) {
 
     console.log(`
-    v3.0.0
+    v3.0.1
     Welcome to Tres Comas
                                                                                                                          
  ,.--.   ,.--.   ,.--.   
@@ -336,50 +338,122 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     next()
                     return
                 }
+                if (el.secure?.type == 'jwt') {
 
-                if (!el?.secure?.user || !el?.secure?.password) {
-                    res.status(403).json({
-                        success: true,
-                        code: 403,
-                        error: 'The user or password is not set',
-                        message: '403 - Forbidden ',
-                        container_id: await getId(),
+                    if (!el?.secure?.password) {
+                        res.status(403).json({
+                            success: true,
+                            code: 403,
+                            error: 'The  password is not set',
+                            message: '403 - Forbidden ',
 
-                    })
-                    return
+
+                        })
+                        return
+                    }
+
+                    try {
+                        if (!req?.headers?.authorization && !req?.query?.authorization) {
+                            res.status(403).json({
+                                success: true,
+                                code: 403,
+                                error: 'Token or header not present',
+                                message: '403 - Forbidden ',
+
+                            })
+                            return
+                        }
+
+                        let auth = (req?.headers?.authorization?.replace('Bearer ', '')) || (req?.query?.authorization?.replace('Bearer ', ''))
+
+                        let decoded = jwt.verify(auth, el.secure.password);
+
+                        console.log('Decoded :: ', decoded.data);
+
+                        if (el.secure?.cb && typeof el.secure?.cb == 'function') {
+                            if (!(await el.secure.cb(decoded))) {
+
+                                res.status(403).json({
+                                    success: true,
+                                    code: 403,
+                                    error: 'CB funtion return error',
+                                    message: '403 - Forbidden ',
+
+                                })
+                                return
+                            }
+
+                        }
+
+                        if (!decoded?.data?.tresComas) {
+                            res.status(403).json({
+                                success: true,
+                                code: 403,
+                                error: 'Token do not allows tresComas',
+                                message: '403 - Forbidden ',
+
+                            })
+                            return
+                        }
+
+                    } catch (error) {
+                        res.status(403).json({
+                            success: true,
+                            code: 403,
+                            error: 'Token is invalid',
+                            message: '403 - Forbidden ',
+
+                        })
+                        return
+                    }
+
+                    next()
+
+                } else {
+                    if (!el?.secure?.user || !el?.secure?.password) {
+                        res.status(403).json({
+                            success: true,
+                            code: 403,
+                            error: 'The user or password is not set',
+                            message: '403 - Forbidden ',
+
+
+                        })
+                        return
+                    }
+
+
+                    if (!req?.headers?.authorization && !req?.query?.authorization) {
+                        res.status(403).json({
+                            success: true,
+                            code: 403,
+                            error: 'Token or header not present',
+                            message: '403 - Forbidden ',
+
+                        })
+                        return
+                    }
+
+                    let auth = (req?.headers?.authorization?.replace('Basic ', '')) || (req?.query?.authorization?.replace('Basic ', ''))
+                    let decoded = el.decodeBase64(auth)
+
+
+                    if (decoded != (el.secure.user + ':' + el.secure.password)) {
+                        res.status(403).json({
+                            success: true,
+                            code: 403,
+                            error: 'Invalid Access or credentials',
+                            message: '403 - Forbidden ',
+
+
+                        })
+                        return
+                    }
+
+                    next()
                 }
 
 
-                if (!req?.headers?.authorization && !req?.query?.authorization) {
-                    res.status(403).json({
-                        success: true,
-                        code: 403,
-                        error: 'Token or header not present',
-                        message: '403 - Forbidden ',
-                        container_id: await getId(),
-                    })
-                    return
-                }
-
-                let auth = (req?.headers?.authorization?.replace('Basic ', '')) || (req?.query?.authorization?.replace('Basic ', ''))
-
-
-                let decoded = el.decodeBase64(auth)
-
-
-                if (decoded != (el.secure.user + ':' + el.secure.password)) {
-                    res.status(403).json({
-                        success: true,
-                        code: 403,
-                        error: 'Invalid Access or credentials',
-                        message: '403 - Forbidden ',
-                        container_id: await getId(),
-
-                    })
-                    return
-                }
-
-                next()
             }
 
 
@@ -389,7 +463,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     code: 200,
                     error: '',
                     message: 'Tres comas (,,,) has been successful started',
-                    container_id: await getId()
+
                 })
             })
 
@@ -498,7 +572,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 200,
                         error: false,
                         message: 'Upload OK',
-                        container_id: await getId(),
+
                         data: response
                     })
                 } catch (e) {
@@ -508,7 +582,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
 
@@ -620,7 +694,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 200,
                         error: false,
                         message: 'Upload OK',
-                        container_id: await getId(),
+
                         data: response
                     })
                 } catch (e) {
@@ -630,7 +704,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
 
@@ -740,7 +814,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 200,
                         error: false,
                         message: 'Upload OK',
-                        container_id: await getId(),
+
                         data: response
                     })
                 } catch (e) {
@@ -750,7 +824,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
 
@@ -862,7 +936,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 200,
                         error: false,
                         message: 'Upload OK',
-                        container_id: await getId(),
+
                         data: response
                     })
                 } catch (e) {
@@ -872,7 +946,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
 
@@ -894,7 +968,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                             code: 403,
                             error: 'Invalid Access or token',
                             message: '403 - Forbidden ',
-                            container_id: await getId(),
+
 
                         })
                         return
@@ -915,7 +989,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
             })
@@ -961,7 +1035,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                             code: 404,
                             error: 'Archivos no encontrados',
                             message: '404 - Not- Found ',
-                            container_id: await getId(),
+
 
                         })
                         return
@@ -972,7 +1046,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 200,
                         data: one,
                         message: 'OK',
-                        container_id: await getId(),
+
 
                     })
                     return
@@ -985,7 +1059,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                         code: 500,
                         error: e,
                         message: 'Upload Error',
-                        container_id: await getId()
+
                     })
                 }
             })
@@ -1009,6 +1083,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
             const _privateInfo = console.info;
             const _privateWarn = console.warn;
             const _privateDebug = console.debug;
+
 
             console.log = async function (message) {
                 _privateLog.apply(console, arguments);
@@ -1040,7 +1115,15 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     query: req.query,
                     params: req.params,
                 }))
-                return '';
+
+                return JSON.stringify({
+                    method: tokens.method(req, res),
+                    url: tokens.url(req, res),
+                    status: tokens.status(req, res),
+                    body: req.body,
+                    query: req.query,
+                    params: req.params,
+                });
             }));
         }
         this.publishServerStats = async function () {
@@ -1087,7 +1170,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                             os_hostname: await os.hostname(),
                             os_arch: await os.arch(),
                         },
-                        container_id: await getId()
+
                     })
                 } catch (e) {
                     console.error(e)
@@ -1117,7 +1200,7 @@ let tresComas = function (mongoDBUri, port = 3007, options = {
                     code: 404,
                     error: 'Resource not found',
                     message: 'Tres-Comas has been successful started',
-                    container_id: await getId()
+
                 })
             })
             if (ssl_config && ssl_config.private && ssl_config.cert && ssl_config.port) {

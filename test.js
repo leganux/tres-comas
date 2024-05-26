@@ -1,7 +1,18 @@
 require('dotenv').config();
-const TresComas = require('./tres-comasv3.js');
+const TresComas = require('./tres-comas.js');
+var jwt = require('jsonwebtoken');
+
+
 
 console.log(process.env);
+
+
+
+let token = jwt.sign({
+    exp: Math.floor(Date.now() / 1000) + (60 * 60),
+    data: { tresComas: true, rdn: Math.random() }
+}, 'RussHanneman');
+
 
 let files = new TresComas('mongodb://localhost/files', 3007, {
     api_base_uri: false,
@@ -27,12 +38,19 @@ let files = new TresComas('mongodb://localhost/files', 3007, {
         region: process.env.AWS_REGION,
         aws_access_key_id: process.env.AWS_ACCESS_KEY_ID,
         aws_secret_access_key: process.env.AWS_SECRET_ACCESS_KEY
+    },
+    secure: {
+        type: "jwt",
+        password: "RussHanneman"
     }
-    /*secure: {
-        user: "tres-comas",
-        password: "Russ-Hanneman"
-    }*/
 });
 
+
+
 files.initialize();
+files.addHooliLogger()
+files.publishServerStats()
 files.start();
+
+
+console.log('Token     ', token);

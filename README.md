@@ -117,6 +117,50 @@ files.start()
 
 ```
 
+
+
+***Secure or protect files endpoint***
+
+You have two options to protect endpoints 
+
+<ul>
+<li>Protect with "Basic Auth": </li>
+</ul>
+
+```javascript
+
+let options={
+    secure: {
+                user: "tres-comas",
+                password: "Russ-Hanneman"
+            }
+}
+
+```
+and add header authorizathion with "Basic base64(user:bassword)"
+
+<ul>
+<li>Protect with "JWT token": </li>
+</ul>
+
+```javascript
+
+let options={
+    secure: {
+                type: "jwt",
+                password: "RussHanneman", //jwt password
+                cb: await function(decoded){} // optional function to validate roles and ACL for token, must return true/false
+            }
+}
+
+```
+and add header authorizathion with "Bearer < Token >"
+
+token.data must cointain { tresComas:true } to explicit allow use
+
+for futher info 
+https://www.npmjs.com/package/jsonwebtoken
+
 <hr>
 
 ## endpoints
